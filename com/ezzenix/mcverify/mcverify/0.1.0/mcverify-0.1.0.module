@@ -27,11 +27,11 @@
         {
           "name": "mcverify-0.1.0.jar",
           "url": "mcverify-0.1.0.jar",
-          "size": 55453,
-          "sha512": "134082890506f63268ce7118f21b1447080a988a2fa617074c206da807bbffa67ad9df147ee32c0d0664b398063afc6c38081b7ac4eed1c326d640bece0d723d",
-          "sha256": "436a37e76680bcd7afa97b580a6ad9dbae1328deb2aa3d931824c24b512e90cc",
-          "sha1": "998814d9acd924b9e10b82b1cdad529b807d181e",
-          "md5": "188f95445245c49d1f9be6725bc279f4"
+          "size": 55538,
+          "sha512": "feb7d8538c6520a72b60dc59b0e458f2ae8e1ae2a19c165b77bc6ace7b11ea398df729c4098ad3a85e8f0583700df2a6294c2f11599791283e4448a91f6015da",
+          "sha256": "6bde1c36087a42f8900f36d272b4f1ba335c1eb8daada27649316098a6670cc6",
+          "sha1": "1dbfafee586174ee5324875261d6e02b5540d9f4",
+          "md5": "1f117b9d989a8766b51628f122ed670a"
         }
       ]
     },
@@ -57,11 +57,11 @@
         {
           "name": "mcverify-0.1.0.jar",
           "url": "mcverify-0.1.0.jar",
-          "size": 55453,
-          "sha512": "134082890506f63268ce7118f21b1447080a988a2fa617074c206da807bbffa67ad9df147ee32c0d0664b398063afc6c38081b7ac4eed1c326d640bece0d723d",
-          "sha256": "436a37e76680bcd7afa97b580a6ad9dbae1328deb2aa3d931824c24b512e90cc",
-          "sha1": "998814d9acd924b9e10b82b1cdad529b807d181e",
-          "md5": "188f95445245c49d1f9be6725bc279f4"
+          "size": 55538,
+          "sha512": "feb7d8538c6520a72b60dc59b0e458f2ae8e1ae2a19c165b77bc6ace7b11ea398df729c4098ad3a85e8f0583700df2a6294c2f11599791283e4448a91f6015da",
+          "sha256": "6bde1c36087a42f8900f36d272b4f1ba335c1eb8daada27649316098a6670cc6",
+          "sha1": "1dbfafee586174ee5324875261d6e02b5540d9f4",
+          "md5": "1f117b9d989a8766b51628f122ed670a"
         }
       ]
     }
