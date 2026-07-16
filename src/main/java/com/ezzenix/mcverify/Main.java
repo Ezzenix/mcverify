@@ -10,8 +10,10 @@ import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,13 +64,15 @@ public class Main {
 	}
 
 	private static TestResult runTest(Instance instance) {
+		List<String> output = new ArrayList<>();
 		try {
 			ProcessUtils.runUntil(instance.start(), line -> {
+				output.add(line);
 				return (LOG_START_MATCHES.stream().anyMatch(line::contains));
 			}, instance.getCloseDelay(), 3);
-			return new TestResult(instance, true, null);
+			return new TestResult(instance, true, null, output);
 		} catch (Exception e) {
-			return new TestResult(instance, false, e);
+			return new TestResult(instance, false, e, output);
 		}
 	}
 
@@ -90,6 +94,14 @@ public class Main {
 				TestResult result = completion.take().get();
 
 				String targetInfo = result.instance().getVersion() + " " + result.instance().getLoader();
+
+				try {
+					if (!result.output.isEmpty()) {
+						Files.write(result.instance.getDirectory().resolve("output.log"), String.join("\n", result.output).getBytes());
+					}
+				} catch (Exception e) {
+					LOGGER.error("Failed to write test output.log", e);
+				}
 
 				String prefix = result.success() ? Colors.bold("[ PASS ] ", Colors.GREEN) : Colors.bold("[ FAIL ] ", Colors.RED);
 				System.out.println(prefix + Colors.RESET + targetInfo + "               ");
@@ -118,6 +130,7 @@ public class Main {
 	public record TestResult(
 		Instance instance,
 		boolean success,
-		Exception exception
+		Exception exception,
+		List<String> output
 	) {}
 }
