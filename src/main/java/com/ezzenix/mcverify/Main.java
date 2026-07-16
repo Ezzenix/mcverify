@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -95,9 +96,12 @@ public class Main {
 
 				String targetInfo = result.instance().getVersion() + " " + result.instance().getLoader();
 
+				Path outputPath = result.instance.getDirectory().resolve("output.log");
+				Path logPath = result.instance.getDirectory().resolve("logs").resolve("latest.log");
+
 				try {
 					if (!result.output.isEmpty()) {
-						Files.write(result.instance.getDirectory().resolve("output.log"), String.join("\n", result.output).getBytes());
+						Files.write(outputPath, String.join("\n", result.output).getBytes());
 					}
 				} catch (Exception e) {
 					LOGGER.error("Failed to write test output.log", e);
@@ -106,9 +110,11 @@ public class Main {
 				String prefix = result.success() ? Colors.bold("[ PASS ] ", Colors.GREEN) : Colors.bold("[ FAIL ] ", Colors.RED);
 				System.out.println(prefix + Colors.RESET + targetInfo + "               ");
 				if (!result.success()) {
-					Path logPath = result.instance.getDirectory().resolve("logs").resolve("latest.log");
 					if (Files.exists(logPath)) {
 						System.out.println(Colors.RED + "         Log: file:///" + logPath.toAbsolutePath().toString().replace("\\", "/") + Colors.RESET + "               ");
+					}
+					if (!result.output.isEmpty()) {
+						System.out.println(Colors.RED + "         Output: file:///" + outputPath.toAbsolutePath().toString().replace("\\", "/") + Colors.RESET + "               ");
 					}
 					if (result.exception != null) {
 						LOGGER.error("Test failed with exception", result.exception);
