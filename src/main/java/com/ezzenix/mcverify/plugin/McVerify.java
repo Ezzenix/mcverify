@@ -5,10 +5,8 @@ import com.ezzenix.mcverify.minecraft.Instance;
 import com.ezzenix.mcverify.util.API;
 import com.ezzenix.mcverify.util.Loader;
 import com.ezzenix.mcverify.util.Version;
-import org.gradle.api.GradleException;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
+import org.gradle.api.*;
+import org.gradle.api.file.RegularFile;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.bundling.AbstractArchiveTask;
@@ -18,15 +16,22 @@ import org.gradle.jvm.toolchain.JavaToolchainService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 import static com.ezzenix.mcverify.plugin.ConfigExtension.findOutputTask;
 import static com.ezzenix.mcverify.util.Util.getJavaVersion;
 
 public class McVerify implements Plugin<Project> {
 	private static final Logger LOGGER = LoggerFactory.getLogger(McVerify.class);
+
+	private static final InstanceFilter FILTER_VERSION_ONLY_ONCE = (instances) -> {
+		Set<Version> foundVersions = new HashSet<>();
+		return instances.stream().filter(instance -> {
+			boolean ok = !foundVersions.contains(instance.version);
+			foundVersions.add(instance.version);
+			return ok;
+		}).toList();
+	};
 
 	@Override
 	public void apply(Project project) {
@@ -44,26 +49,8 @@ public class McVerify implements Plugin<Project> {
 		ConfigExtension config = project.getExtensions().create("mcverify", ConfigExtension.class);
 
 		Project root = project.getRootProject();
-
-		if (!root.getTasks().getNames().contains("testAllVersions")) {
-			TaskProvider<Task> testAllVersions = root.getTasks().register("testAllVersions", task -> {
-				task.setGroup("mcverify");
-				task.usesService(service);
-				task.doLast(t -> {
-					service.get();
-					runTestAll(root);
-				});
-			});
-
-			root.getGradle().projectsEvaluated(g -> {
-				root.getAllprojects().forEach(p -> {
-					Provider<AbstractArchiveTask> jarTask = findOutputTask(p);
-					if (jarTask != null) {
-						testAllVersions.configure(task -> task.dependsOn(jarTask));
-					}
-				});
-			});
-		}
+		registerRootTestTask(root, "testAllVersions", service, FILTER_VERSION_ONLY_ONCE);
+		registerRootTestTask(root, "testAllVersionsAndLoaders", service, null);
 
 		project.afterEvaluate(p -> {
 			Loader loader = getLoaderFromConfig(config);
@@ -80,21 +67,32 @@ public class McVerify implements Plugin<Project> {
 						run(project, loader, version);
 					});
 				});
-
-				/*
-				project.getTasks().register("Test " + version.toString() + " " + loader, task -> {
-					task.setGroup("mcverify");
-					task.usesService(service);
-					Provider<AbstractArchiveTask> jarTask = findOutputTask(project);
-					if (jarTask != null) task.dependsOn(jarTask);
-					task.doLast(t -> {
-						service.get();
-						runTest(project, loader, version);
-					});
-				});
-				 */
 			});
 		});
+	}
+
+	private void registerRootTestTask(Project root, String taskName, Provider<ProcessService> service, InstanceFilter filter) {
+		try {
+			root.getTasks().named(taskName);
+		} catch (UnknownTaskException e) {
+			TaskProvider<Task> newTask = root.getTasks().register(taskName, task -> {
+				task.setGroup("mcverify");
+				task.usesService(service);
+				task.doLast(t -> {
+					service.get();
+					runTestAll(root, filter);
+				});
+			});
+
+			root.getGradle().projectsEvaluated(g -> {
+				root.getAllprojects().forEach(p -> {
+					Provider<AbstractArchiveTask> jarTask = findOutputTask(p);
+					if (jarTask != null) {
+						newTask.configure(task -> task.dependsOn(jarTask));
+					}
+				});
+			});
+		}
 	}
 
 	private void run(Project project, Loader loader, Version version) {
@@ -110,23 +108,8 @@ public class McVerify implements Plugin<Project> {
 		}
 	}
 
-	/*
-	private void runTest(Project project, Loader loader, Version version) {
-		ConfigExtension config = project.getExtensions().findByType(ConfigExtension.class);
-		if (config == null) return;
-
-		try {
-			Instance instance = Main.createInstance(loader, version);
-			applyInstanceSettings(instance, config, project);
-
-			Main.runTests(List.of(instance), 1);
-		} catch (Exception e) {}
-	}
-	 */
-
-	private void runTestAll(Project rootProject) {
-		List<Instance> instances = new ArrayList<>();
-
+	private void runTestAll(Project rootProject, InstanceFilter filter) {
+		List<InstanceInfo> instanceInfos = new ArrayList<>();
 		int workers = 1;
 
 		for (Project subproject : rootProject.getAllprojects()) {
@@ -140,15 +123,35 @@ public class McVerify implements Plugin<Project> {
 				workers = Math.max(workers, config.getWorkers().get());
 			}
 
-			versions.forEach(version -> {
-				try {
-					Instance instance = Main.createInstance(loader, version);
-					applyInstanceSettings(instance, config, subproject);
-					instances.add(instance);
-				} catch (Exception e) {
-					LOGGER.warn("Failed to setup instance for {} {}", version, loader, e);
+			for (Version version : versions) {
+				InstanceInfo info = new InstanceInfo(loader, version, config, subproject);
+				if (!instanceInfos.contains(info)) {
+					instanceInfos.add(info);
+				} else {
+					LOGGER.warn("Found instance {} {} defined more than once", info.version, info.loader);
 				}
-			});
+			}
+		}
+
+		if (filter != null) {
+			instanceInfos = filter.apply(instanceInfos);
+		}
+
+		List<Instance> instances = new ArrayList<>();
+
+		for (InstanceInfo info : instanceInfos) {
+			try {
+				Instance instance = Main.createInstance(info.loader, info.version);
+				applyInstanceSettings(instance, info.config, info.project);
+				instances.add(instance);
+			} catch (Exception e) {
+				LOGGER.warn("Failed to setup instance for {} {}", info.version, info.loader, e);
+			}
+		}
+
+		if (instances.isEmpty()) {
+			LOGGER.error("Found no instances to run.");
+			return;
 		}
 
 		try {
@@ -159,18 +162,18 @@ public class McVerify implements Plugin<Project> {
 	}
 
 	private void applyInstanceSettings(Instance instance, ConfigExtension config, Project project) {
-		if (config.getUsername().isPresent()) {
-			instance.setUsername(config.getUsername().get());
-		}
-		if (config.getServerAddress().isPresent()) {
-			instance.setQuickPlayAddress(config.getServerAddress().get());
-		}
-		if (config.getFile().isPresent()) {
-			instance.copyMod(config.getFile().getAsFile().get().toPath());
-		}
-		if (config.getCloseDelay().isPresent()) {
-			instance.setCloseDelay(config.getCloseDelay().get());
-		}
+		String username = config.getUsername().getOrNull();
+		if (username != null) instance.setUsername(username);
+
+		String address = config.getServerAddress().getOrNull();
+		if (address != null) instance.setQuickPlayAddress(address);
+
+		RegularFile file = config.getFile().getOrNull();
+		if (file != null) instance.copyMod(file.getAsFile().toPath());
+
+		Integer closeDelay = config.getCloseDelay().getOrNull();
+		if (closeDelay != null) instance.setCloseDelay(closeDelay);
+
 		instance.setJavaPath(getJavaPath(project, instance.getVersion()));
 		config.getMods().forEach(instance::downloadMod);
 	}
@@ -227,6 +230,25 @@ public class McVerify implements Plugin<Project> {
 		});
 
 		return launcherProvider.get().getExecutablePath().getAsFile().getAbsolutePath();
+	}
+
+	private record InstanceInfo(Loader loader, Version version, ConfigExtension config, Project project) {
+		@Override
+		public boolean equals(Object o) {
+			if (o == null || getClass() != o.getClass()) return false;
+			InstanceInfo that = (InstanceInfo) o;
+			return loader == that.loader && Objects.equals(version, that.version);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(loader, version);
+		}
+	}
+
+	@FunctionalInterface
+	private interface InstanceFilter {
+		List<InstanceInfo> apply(List<InstanceInfo> instanceInfos);
 	}
 
 }
