@@ -58,12 +58,6 @@ mcverify {
     // If less than 0 the client will not close automatically.
     // Defaults to 0.
     closeDelay = 0
-    
-    // (Optional) How many clients to run simultaneously when running testAllVersions.
-    // Do not set too high or your computer will be sad.
-    // If your have multiple configurations the highest value will be used.
-    // Defaults to 1.
-    workers = 1
 
     // (Optional) Set username to use.
     username = "Player"

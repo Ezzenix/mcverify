@@ -23,7 +23,7 @@ public class ConfigExtension {
 	private final Property<String> username;
 	private final Property<String> serverAddress;
 	private final Property<Integer> closeDelay;
-	private final Property<Integer> workers;
+	//private final Property<Integer> workers;
 
 	private final List<String> mods = new ArrayList<>();
 
@@ -38,7 +38,7 @@ public class ConfigExtension {
 		username = objects.property(String.class);
 		serverAddress = objects.property(String.class);
 		closeDelay = objects.property(Integer.class);
-		workers = objects.property(Integer.class);
+		//workers = objects.property(Integer.class);
 
 		versionRange = objects.newInstance(VersionRange.class);
 
@@ -72,9 +72,11 @@ public class ConfigExtension {
 		return closeDelay;
 	}
 
+	/*
 	public Property<Integer> getWorkers() {
 		return workers;
 	}
+	 */
 
 	public VersionRange getVersionRange() {
 		return versionRange;

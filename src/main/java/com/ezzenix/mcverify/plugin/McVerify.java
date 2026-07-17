@@ -119,9 +119,11 @@ public class McVerify implements Plugin<Project> {
 			Loader loader = getLoaderFromConfig(config);
 			List<Version> versions = getVersionsFromConfig(config);
 
+			/*
 			if (config.getWorkers().isPresent()) {
 				workers = Math.max(workers, config.getWorkers().get());
 			}
+			 */
 
 			for (Version version : versions) {
 				InstanceInfo info = new InstanceInfo(loader, version, config, subproject);
