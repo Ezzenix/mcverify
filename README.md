@@ -5,7 +5,6 @@ Gradle plugin that automates testing different Minecraft versions for mod develo
 - Download and run Minecraft instances automatically.
 - Starts client instances and monitors the logs to verify that it reaches the main menu.
 - Automatically install other mods for testing compatibility.
-- Run instances concurrently to accelerate testing.
 - Run your mod in different versions of Minecraft than the one you have your project set up in.
 
 ---
