@@ -19,7 +19,7 @@ pluginManagement {
 }
 
 plugins {
-    id("com.ezzenix.mcverify") version "0.1.0"
+    id("com.ezzenix.mcverify") version "0.1.1"
 }
 ```
 
